@@ -1,0 +1,64 @@
+#!/bin/bash
+#PBS -N common-crawl
+#PBS -A USMAN37466EE3
+#PBS -l select=3:ncpus=36:mpiprocs=36,walltime=00:10:00
+#PBS -q debug
+
+nodes=($( cat $PBS_NODEFILE | sort | uniq ))
+nnodes=${#nodes[@]}
+last=$(( $nnodes - 1 ))
+
+source $MODULESHOME/init/bash
+
+module load java
+module load spark/2.2.0
+
+#creates cat_master_test.sh to launch master node
+cat > $WORKDIR/cat_master_test.sh <<EOT
+#!/bin/bash
+
+source $MODULESHOME/init/bash
+
+module load java
+module load spark/2.2.0
+
+cd ${SPARK_HOME}
+./sbin/start-master.sh
+
+EOT
+
+#change permissions to executable
+chmod +x $WORKDIR/cat_master_test.sh
+
+echo "Launching spark master on ${nodes[0]} ..."
+ssh ${nodes[0]} '$WORKDIR/cat_master_test.sh'
+
+#creates cat_worker_test.sh to launch worker nodes and connect back to master
+cat > $WORKDIR/cat_worker_test.sh <<EOT
+#!/bin/bash
+
+source $MODULESHOME/init/bash
+
+module load java
+module load spark/2.2.0
+
+cd ${SPARK_HOME}
+./sbin/start-slave.sh spark://${nodes[0]}:7077
+
+EOT
+
+#change permissions to executable
+chmod +x $WORKDIR/cat_worker_test.sh
+
+#for each remaining node in the list, execute startup for worker
+for i in $(seq 1 $last)
+    do
+                ssh ${nodes[$i]} '$WORKDIR/cat_worker_test.sh'
+    done
+
+#cleanup
+rm $WORKDIR/cat_master_test.sh
+rm $WORKDIR/cat_worker_test.sh
+
+echo "Submitting job"
+${SPARK_HOME}/bin/spark-submit --class edu.usma.cc.SimpleApp --master spark://${nodes[0]}:7077 $WORKDIR/cc.jar
