@@ -41,5 +41,7 @@ You can no longer map directly over the rows of DataFrames, as they are now simp
 
 `df.map { row: Row  => ... }`
 
+* Now you should write:
+
 `df.rdd.map { row: Row => ... }`
 
