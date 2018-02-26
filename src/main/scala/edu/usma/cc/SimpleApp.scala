@@ -21,7 +21,7 @@ object SimpleApp {
     // val emailPattern3 = new Regex("""(?:[a-z0-9._%+-]+@[A-Z0-9.-]\.[A-Z]){8,64}""")
     // emailPattern4 is a REGEX which is simpler, yet ought still catch many, if not all emails
     val emailPattern4 = new Regex("""\b[A-Za-z0-9._%+-]{1,64}@(?:[A-Za-z0-9.-]{1,63}\.){1,125}[A-Za-z]{2,63}\b""")
-    val emails = logData.rdd.flatMap(line => emailPattern4.findFirstMatchIn(line))
+    val emails = logData.rdd.flatMap{line => emailPattern4.findAllMatchIn(line)}
     //emails.write.format("text").save("/Users/andre/Documents/Academics/AY18-2/cs489A/crawl-results/emails.txt")
 //    emails.collect()
     emails.saveAsTextFile("/Users/andre/Documents/Academics/AY18-2/cs489A/crawl-results/emails.txt")
