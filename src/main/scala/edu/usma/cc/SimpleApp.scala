@@ -6,9 +6,10 @@ import scala.util.matching.Regex
 
 object SimpleApp {
   def main(args: Array[String]) {
-    val logFile = "/Users/andre/Documents/Academics/AY18-2/cs489A/crawl-data/CC-MAIN-2018-05/segments/1516084891105.83/wet/CC-MAIN-20180122054202-20180122074202-00449.warc.wet"
+    val firstDir = "/Users/andre/Documents/Academics/AY18-2/cs489A/crawl-data/CC-MAIN-2018-05/segments/1516084887660.30/wet/*"
+    val secondDir = "/Users/andre/Documents/Academics/AY18-2/cs489A/crawl-data/CC-MAIN-2018-05/segments/1516084891105.83/wet/*"
     val spark = SparkSession.builder.appName("Simple Application").getOrCreate()
-    val logData = spark.read.textFile(logFile)
+    val logData = spark.read.textFile(firstDir,secondDir)
     
     // The following are a few different REGEXs which can be used in finding emails
     // emailPattern is the most simple
