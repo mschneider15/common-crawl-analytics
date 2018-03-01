@@ -83,3 +83,11 @@ for file in 1516084891105.83/wet/*; do echo $file; done
 for file in 1516084891105.83/wet/*; do gunzip $file; done
 ```
 
+### Storing the output into a single file
+
+The two one liners below store the emails in a single file and place a line of text to indicate where the emails below came from.
+```
+for num in {00..09}; do echo part-0000$num >> 0003-emails.txt; cat emails.txt/part-0000$num >> 0003-emails.txt; done
+for num in {10..27}; do echo part-000$num >> 0003-emails.txt; cat emails.txt/part-000$num >> 0003-emails.txt; done
+```
+
