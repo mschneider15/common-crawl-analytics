@@ -32,6 +32,13 @@ This project was developed on the DoD HPC Center Topaz cluster. To get an accoun
 $ qsub spark-submit.pbs 
 ```
 
+### Check out the folowing Apache Spark webpage links below for useful information
+
+* A quick-start guide which will help you to gain a greater understanding of how to exercies the basic utilities of Apache Spark
+https://spark.apache.org/docs/latest/quick-start.html
+* The RDD Programming Guide, useful in understanding how Apache Spark parallelizes data for use in a SparkContext
+https://spark.apache.org/docs/latest/rdd-programming-guide.html#resilient-distributed-datasets-rdds
+
 ## Spark 2.-.- idiosyncracies
 
 * Using map & flatMap methods on Datasets
