@@ -7,6 +7,7 @@ lazy val root = (project in file(".")).
     )),
     name := "cc",
     libraryDependencies ++= Seq(
-      "org.apache.spark" %% "spark-sql" % "2.2.1"
+      "org.apache.spark" %% "spark-sql" % "2.2.1" % "provided",
+      "org.jwat" % "jwat-warc" % "1.1.0"
     )
   )
