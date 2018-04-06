@@ -35,9 +35,24 @@ $ qsub spark-submit.pbs
 ### Check out the folowing Apache Spark webpage links below for useful information
 
 * A quick-start guide which will help you to gain a greater understanding of how to exercies the basic utilities of Apache Spark
-https://spark.apache.org/docs/latest/quick-start.html
+`https://spark.apache.org/docs/latest/quick-start.html`
 * The RDD Programming Guide, useful in understanding how Apache Spark parallelizes data for use in a SparkContext
-https://spark.apache.org/docs/latest/rdd-programming-guide.html#resilient-distributed-datasets-rdds
+`https://spark.apache.org/docs/latest/rdd-programming-guide.html#resilient-distributed-datasets-rdds`
+* The Spark Streaming webpage, useful in understanding how the file is opened as a file stream.
+`https://spark.apache.org/docs/latest/streaming-programming-guide.html`
+  * Used the Hadoop filestream format described under the _Basic Sources_ -> _FileStreams_ paragraph with the format `StreamingContext.fileStream[KeyClass, ValueClass, InputFormatClass](filePath)`
+  * KeyClass: `LongWritable` (imported with `org.apache.hadoop.io.LongWritable`)
+  * ValueClass: `WARCWritable` (imported with `com.martinkle.warc.warc-hadoop.WARCWritable`)
+  * InputFormatClass: `WARCInputFormat` (import with `com.martinkle.warc.warc-hadoop.WARCInputFormat`)
+
+## The WARC Parser
+
+Unless you are a prodigal programmer, or just happen to have your own WARC parser lying around, you'll want to use an open source project.  The one I used in this project (and have referenced a few other places so far) is available on GitHub at the following URL.  The package I imported to use it belongs to is com.martinkl.warc.\_
+`https://github.com/ept/warc-hadoop`
+
+## Compiling
+
+This project was built using sbt.  You'll notice it uses a number of specific packages and they are not always included if you compile with `sbt package`, therefore I always compiled from the common-crawl-analytics directory with `sbt assembly`.
 
 ## Spark 2.-.- idiosyncracies
 

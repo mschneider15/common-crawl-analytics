@@ -10,12 +10,19 @@ import java.util.Collection
 import java.util.Iterator
 import scala.util.matching.Regex
 
-import org.jwat.warc.WarcReader
-import org.jwat.warc.WarcReaderFactory
-import org.jwat.warc.WarcRecord
+import com.martinkl.warc.WARCFileReader
+import com.martinkl.warc.WARCFileWriter
+import com.martinkl.warc.mapreduce.WARCInputFormat
+import com.martinkl.warc.mapreduce.WARCOutputFormat
+import com.martinkl.warc.WARCRecord
+import com.martinkl.warc.WARCRecord.Header
+import com.martinkl.warc.WARCWritable
 
+import org.apache.spark._
+import org.apache.spark.streaming._
+import org.apache.spark.streaming.StreamingContext._
 import org.apache.spark.sql.SparkSession
-// import org.apache.spark.streaming._
+import org.apache.hadoop.io.LongWritable
 
 object SimpleApp {
 
@@ -26,19 +33,16 @@ object SimpleApp {
     val firstDir = "/Users/andre/Documents/Academics/AY18-2/cs489A/crawl-data/CC-MAIN-2018-05/segments/1516084887660.30/wet/*"
     val secondDir = "/Users/andre/Documents/Academics/AY18-2/cs489A/crawl-data/CC-MAIN-2018-05/segments/1516084891105.83/wet/*"
 		
-		// Open warcFile as an input stream
-    // TODO - Open warcFile as an input stream within Spark
-		val file = new File( warcFile )
-	  val in = new FileInputStream( file )
-    
 		// Initialize the sparkSession
 		val spark = SparkSession.builder.appName("Simple Application").getOrCreate()
 		
     // Initialize a StreamingContext, ssc
-    // val ssc = new StreamingContext(spark)
+    val ssc = new StreamingContext(spark.sparkContext, Seconds(30))
 
-    // Open a textFile as a stream
-    // val tfi = ssc.textFileStream(warcFile)
+		// Open warcFile as an input stream
+    // format: fileStream[keyClass, valueClass, InputFormatClass](filePath)
+    val in = ssc.fileStream[LongWritable,WARCWritable,WARCInputFormat](warcFile) 
+
 		// Read in the file directories for analysis
     // val logData = spark.read.textFile(firstDir, secondDir)
     
@@ -53,44 +57,25 @@ object SimpleApp {
     // emails.saveAsTextFile("/Users/andre/Documents/Academics/AY18-2/cs489A/crawl-results/emails.txt")
 
     // Initiate the records information
-    var records = 0
-    var reader = WarcReaderFactory.getReader( in )
-    var record = reader.getNextRecord()
-    while ( records <= 20 ) {
-      printRecord(record)
-      record = reader.getNextRecord()
-      records += 1
-    }
 
     println("--------------")
-    println("       Records: " + records)
-    reader.close()
-    in.close()
-
+    println("WARCRecords:")
+    in.mapValues(
+        record => printRecordHeader(record.getRecord)
+    )
+    ssc.start()
+    ssc.awaitTermination()
     // Shut down the Spark session
+    ssc.stop()
     spark.stop()
   }
 
-  def printRecord(record: WarcRecord) {
+  def printRecordHeader(record: WARCRecord) {
     println("--------------")
-    println("       Version: " + record.header.bMagicIdentified + " " + record.header.bVersionParsed + " " + record.header.major + "." + record.header.minor)
-    println("       TypeIdx: " + record.header.warcTypeIdx)
-    println("          Type: " + record.header.warcTypeStr)
-    println("      Filename: " + record.header.warcFilename)
-    println("     Record-ID: " + record.header.warcRecordIdUri)
-    println("          Date: " + record.header.warcDate)
-    println("Content-Length: " + record.header.contentLength)
-    println("  Content-Type: " + record.header.contentType)
-    println("     Truncated: " + record.header.warcTruncatedStr)
-    println("   InetAddress: " + record.header.warcInetAddress)
-    println("      RefersTo: " + record.header.warcRefersToUri)
-    println("     TargetUri: " + record.header.warcTargetUriUri)
-    println("   BlockDigest: " + record.header.warcBlockDigest)
-    println(" PayloadDigest: " + record.header.warcPayloadDigest)
-    println("IdentPloadType: " + record.header.warcIdentifiedPayloadType)
-    println("       Profile: " + record.header.warcProfileStr)
-    println("      Segment#: " + record.header.warcSegmentNumber)
-    println(" SegmentOrg-Id: " + record.header.warcSegmentOriginIdUrl)
-    println("SegmentTLength: " + record.header.warcSegmentTotalLength)
+    println("     Record-ID: " + record.getHeader.getRecordID)
+    println("          Date: " + record.getHeader.getDateString)
+    println("Content-Length: " + record.getHeader.getContentLength)
+    println("  Content-Type: " + record.getHeader.getContentType)
+    println("     TargetUri: " + record.getHeader.getTargetURI)
   }
 }
