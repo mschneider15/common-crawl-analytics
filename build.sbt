@@ -8,6 +8,12 @@ lazy val root = (project in file(".")).
     name := "cc",
     libraryDependencies ++= Seq(
       "org.apache.spark" %% "spark-sql" % "2.2.1" % "provided",
-      "org.jwat" % "jwat-warc" % "1.1.0"
+      "org.apache.spark" % "spark-streaming_2.11" % "2.3.0",
+      "org.jwat" % "jwat-warc" % "1.1.0",
+      "com.martinkl.warc" % "warc-hadoop" % "0.1.0"
     )
   )
+assemblyMergeStrategy in assembly := {
+  case PathList("META-INF", xs @ _*) => MergeStrategy.discard
+  case x => MergeStrategy.first
+}
