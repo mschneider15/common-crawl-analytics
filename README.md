@@ -95,6 +95,13 @@ OR _if you were to place the file paths in a file, or you just read them from th
 while read filePath; do curl https://commoncrawl.s3.amazonaws.com/$filePath > $filePath; done < crawl-files.txt
 ```
 
+### Ingesting Data With a Bash Script
+
+The file, `ingestData.sh` is available for your use to ingest the entire corpus.  Update the shell in the following ways for your use.
+
+* Update the `runDir` variable at the top of the file with the full path to the directory you want to store the crawl-data directory in.
+* Provide the script with the wet.paths file you specifically are looking for.
+
 ## Useful Bash Scripts
 
 ### Unzipping many files in a single folder
