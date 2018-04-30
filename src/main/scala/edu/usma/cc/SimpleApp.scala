@@ -37,7 +37,7 @@ object SimpleApp {
 		val spark = SparkSession.builder.appName("Simple Application").getOrCreate()
 		
     // Initialize a StreamingContext, ssc
-    val ssc = new StreamingContext(spark.sparkContext, Seconds(30))
+    val ssc = new StreamingContext(spark.sparkContext, Seconds(1))
 
 		// Open warcFile as an input stream
     // format: fileStream[keyClass, valueClass, InputFormatClass](filePath)
@@ -60,14 +60,17 @@ object SimpleApp {
 
     println("--------------")
     println("WARCRecords:")
-    in.mapValues(
-        record => printRecordHeader(record.getRecord)
+    val urls = in.mapValues(
+        record => (record.getRecord.getHeader.getTargetURI, 1)
     )
+    //val urlsCounts = urls.reduceByKey(_ + _)
+    //urlsCounts.print()
+    urls.print()
     ssc.start()
     ssc.awaitTermination()
     // Shut down the Spark session
-    ssc.stop()
-    spark.stop()
+    if ssc.stop()
+    // spark.stop()
   }
 
   def printRecordHeader(record: WARCRecord) {
