@@ -15,9 +15,6 @@ import org.jwat.warc.WarcReaderFactory
 import org.jwat.warc.WarcRecord
 
 import org.apache.spark.sql.SparkSession
-// import org.apache.spark.streaming._
-
-object SimpleApp {
 
   def main(args: Array[String]) {
 		// Path to WARC files
@@ -37,8 +34,6 @@ object SimpleApp {
     // Initialize a StreamingContext, ssc
     // val ssc = new StreamingContext(spark)
 
-    // Open a textFile as a stream
-    // val tfi = ssc.textFileStream(warcFile)
 		// Read in the file directories for analysis
     // val logData = spark.read.textFile(firstDir, secondDir)
     
@@ -73,7 +68,7 @@ object SimpleApp {
 
   def printRecord(record: WarcRecord) {
     println("--------------")
-    println("       Version: " + record.header.bMagicIdentified + " " + record.header.bVersionParsed + " " + record.header.major + "." + record.header.minor)
+    println("       Version: " + record.header.major + "." + record.header.minor)
     println("       TypeIdx: " + record.header.warcTypeIdx)
     println("          Type: " + record.header.warcTypeStr)
     println("      Filename: " + record.header.warcFilename)
@@ -81,16 +76,8 @@ object SimpleApp {
     println("          Date: " + record.header.warcDate)
     println("Content-Length: " + record.header.contentLength)
     println("  Content-Type: " + record.header.contentType)
-    println("     Truncated: " + record.header.warcTruncatedStr)
-    println("   InetAddress: " + record.header.warcInetAddress)
     println("      RefersTo: " + record.header.warcRefersToUri)
     println("     TargetUri: " + record.header.warcTargetUriUri)
     println("   BlockDigest: " + record.header.warcBlockDigest)
-    println(" PayloadDigest: " + record.header.warcPayloadDigest)
-    println("IdentPloadType: " + record.header.warcIdentifiedPayloadType)
-    println("       Profile: " + record.header.warcProfileStr)
-    println("      Segment#: " + record.header.warcSegmentNumber)
-    println(" SegmentOrg-Id: " + record.header.warcSegmentOriginIdUrl)
-    println("SegmentTLength: " + record.header.warcSegmentTotalLength)
   }
 }
