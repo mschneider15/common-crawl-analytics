@@ -29,6 +29,7 @@ object SimpleApp {
     val secondDir = "/Users/andre/Documents/Academics/AY18-2/cs489A/crawl-data/CC-MAIN-2018-05/segments/1516084891105.83/wet/*"
     val warcDir = "/Users/andre/Documents/Academics/AY18-2/cs489A/crawl-data/"
 		
+    // TODO - define an array with all numbered segments included. Initialize the first directory's matches' RDD and then union it with the identified matches from all of the other RDDs
 		// Initialize the sparkSession
 		val spark = SparkSession.builder.appName("Simple Application").getOrCreate()
     val sc = spark.sparkContext
