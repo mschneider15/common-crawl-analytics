@@ -154,11 +154,11 @@ object SimpleApp {
       val reduced = filtered.reduceByKey(_ ++ _)
 
       val sorted = reduced.sortBy(_._2.size)
-      
+     
       firstRDD = firstRDD.union(sorted)
     }
 
-    val savedFilePath = "/p/work2/commoncrawl/crawl-results/test1"
+    val savedFilePath = "/p/work2/commoncrawl/crawl-results/object"
 
     val finalResults = firstRDD.sortBy(_._2.size)
     

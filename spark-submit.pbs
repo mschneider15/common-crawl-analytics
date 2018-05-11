@@ -1,7 +1,7 @@
 #!/bin/bash
 #PBS -N common-crawl
 #PBS -A USMAN37466EE3
-#PBS -l select=2048:ncpus=36:mpiprocs=36,walltime=30:00:00
+#PBS -l select=256:ncpus=36:mpiprocs=36,walltime=00:30:00
 #PBS -q standard
 
 nodes=($( cat $PBS_NODEFILE | sort | uniq ))
