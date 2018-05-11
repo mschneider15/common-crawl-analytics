@@ -57,7 +57,7 @@ object SimpleApp {
 
     val sorted = reduced.sortBy(_._2.size)
 
-    sorted.saveAsTextFile("test1")
+    sorted.saveAsObjectFile("object")
 
     // Initiate the records information
 
