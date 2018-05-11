@@ -1,0 +1,22 @@
+import org.apache.hadoop.io._
+import com.martinkl.warc.WARCFileReader
+import com.martinkl.warc.WARCFileWriter
+import com.martinkl.warc.mapreduce.WARCInputFormat
+import com.martinkl.warc.mapreduce.WARCOutputFormat
+import com.martinkl.warc.WARCRecord
+import com.martinkl.warc.WARCRecord.Header
+import com.martinkl.warc.WARCWritable
+import scala.util.matching.Regex
+
+val emailPattern = new Regex("""\b[A-Za-z0-9._%+-]{1,64}@(?:[A-Za-z0-9.-]{1,63}\.){1,125}[A-Za-z]{2,63}\b""")
+
+val warcFile = "/Users/andre/Documents/Academics/AY18-2/cs489A/CC-MAIN-20180118230513-20180119010513-00000.warc.wet"
+val warcinput = sc.newAPIHadoopFile(warcFile, classOf[WARCInputFormat], classOf[LongWritable], classOf[WARCWritable])
+val warcs = warcinput.values
+val test1Result = warcs.map(warc => warc.getRecord.getHeader.getTargetURI)
+test1Result.foreach(println)
+
+val matches = warcs.flatMap( warc => emailPattern.findAllMatchIn(new String(warc.getRecord.getContent) ) )
+
+
+

@@ -1,13 +1,7 @@
 package edu.usma.cc
 
 import java.io._
-import java.io.File
-import java.io.FileInputStream
-import java.io.FileNotFoundException
-import java.io.IOException
-import java.io.InputStream
-import java.util.Collection
-import java.util.Iterator
+import java.net.URI
 import scala.util.matching.Regex
 
 import com.martinkl.warc.WARCFileReader
@@ -33,6 +27,7 @@ object SimpleApp {
   	val warcFile = "/Users/andre/Documents/Academics/AY18-2/cs489A/CC-MAIN-20180118230513-20180119010513-00000.warc.wet"
     val firstDir = "/Users/andre/Documents/Academics/AY18-2/cs489A/crawl-data/CC-MAIN-2018-05/segments/1516084887660.30/wet/*"
     val secondDir = "/Users/andre/Documents/Academics/AY18-2/cs489A/crawl-data/CC-MAIN-2018-05/segments/1516084891105.83/wet/*"
+    val warcDir = "/Users/andre/Documents/Academics/AY18-2/cs489A/crawl-data/"
 		
 		// Initialize the sparkSession
 		val spark = SparkSession.builder.appName("Simple Application").getOrCreate()
@@ -40,7 +35,7 @@ object SimpleApp {
 		
 
 		// Open warcFile as an input stream
-    val warcInput = sc.newAPIHadoopFile(warcFile, classOf[WARCInputFormat], classOf[LongWritable],classOf[WARCWritable]) 
+    val warcInput = sc.newAPIHadoopFile(firstDir, classOf[WARCInputFormat], classOf[LongWritable],classOf[WARCWritable]) 
 
 		// Read in the file directories for analysis
     // val logData = spark.read.textFile(firstDir, secondDir)
@@ -51,40 +46,53 @@ object SimpleApp {
     // emails.saveAsTextFile("/Users/andre/Documents/Academics/AY18-2/cs489A/crawl-results/emails.txt")
 
     val warcs = warcInput.values
+    
+    // Creates a new RDD which contains tuples of matched emails and the page they were found on. 
+    val matches = warcs.flatMap( warc => analyze(warc.getRecord) )
+    
+    val filtered = matches.filter(tup => tup._2 != null)
 
-    val test1Result = warcs.map( warc => analyze(warc.getRecord) )
+    val reduced = filtered.reduceByKey(_ ++ _)
+
+    val sorted = reduced.sortBy(_._2.size)
+
+    sorted.saveAsTextFile("test1")
 
     // Initiate the records information
 
     println("--------------")
-    println("WARCRecords:")
-    test1Result.foreach(println)
+    println("WARCRecords save as test1")
     spark.stop()
   }
 
-  def analyze(record: WARCRecord): String = {
-    val ret = returnEmails(record)
-    return ret
+  def analyze(record: WARCRecord): Array[(String, Array[URI])] = {
+    val emails = returnEmails(record)
+    if (emails.isEmpty) {
+      return Array(("null", null))
+    } else {
+      val uri = new URI(record.getHeader.getTargetURI)
+      for (email <- emails) yield {
+       (email, Array(uri))
+      }
+    }
   }
 
-  def returnEmails(record: WARCRecord): String = {
+  def returnEmails(record: WARCRecord): Array[String] = {
 		// Defines the Regex used in finding emails
     val emailPattern = new Regex("""\b[A-Za-z0-9._%+-]{1,64}@(?:[A-Za-z0-9.-]{1,63}\.){1,125}[A-Za-z]{2,63}\b""")
     
     val content = new String(record.getContent)
 
-    var ret = ""
-    emailPattern.findAllMatchIn(content).map(_ + "\n").foreach(ret += _)
-    return ret
+    return emailPattern.findAllMatchIn(content).toArray.map(email => email.toString)
   }
 
-  def returnRecordHeader(record: WARCRecord): String = {
+  def returnRecordHeader(header: Header): String = {
     var ret = "--------------\n"
-    ret += "     Record-ID: " + record.getHeader.getRecordID + "\n"
-    ret += "          Date: " + record.getHeader.getDateString + "\n"
-    ret += "Content-Length: " + record.getHeader.getContentLength + "\n"
-    ret += "  Content-Type: " + record.getHeader.getContentType + "\n"
-    ret += "     TargetUri: " + record.getHeader.getTargetURI + "\n"
+    ret += "     Record-ID: " + header.getRecordID + "\n"
+    ret += "          Date: " + header.getDateString + "\n"
+    ret += "Content-Length: " + header.getContentLength + "\n"
+    ret += "  Content-Type: " + header.getContentType + "\n"
+    ret += "     TargetUri: " + header.getTargetURI + "\n"
     return ret
   }
 
