@@ -19,7 +19,7 @@ This project was developed on the DoD HPC Center Topaz cluster. To get an accoun
 
 ### On a Cluster
 
-* To build the jar, download sbt-1.0.2 and run `sbt package`
+* To build the jar, download sbt-1.0.2 and run `sbt assembly`
 * Copy the jar to `$WORKDIR` and edit the last line of `spark-submit.pbs` with your jar location, then run:
 
 ### On a personal installation:
