@@ -18,7 +18,8 @@ This project contains analytics designed to run on AWS clusters.
 * Running out of Java heap space memory
 * Estimating cost of a job
 
-* Attempted I2.8xlarge for large jobs (3 nodes)
+* Attempt m4.xlarge for large job (3 nodes)
+* Attempted I2.8xlarge for large job (3 nodes)
 * Want to try on r5d.2xlarge with configurations:
 Spark.executor.instances: 6
 spark.yarn.executor.memoryOverhead: 3072
