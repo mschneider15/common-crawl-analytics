@@ -18,6 +18,18 @@ This project contains analytics designed to run on AWS clusters.
 * Running out of Java heap space memory
 * Estimating cost of a job
 
+* Attempted I2.8xlarge for large jobs (3 nodes)
+* Want to try on r5d.2xlarge with configurations:
+Spark.executor.instances: 6
+spark.yarn.executor.memoryOverhead: 3072
+Spark.executor.memory: 18
+spark.yarn.driver.memoryOverhead: 7168
+Spark.driver.memory: 56
+Spark.executor.cores: 1
+Spark.driver.cores: 3
+Spark.default.parallelism: 12
+
+
 ### Check out the folowing Apache Spark webpage links below for useful information
 
 * A quick-start guide which will help you to gain a greater understanding of how to exercies the basic utilities of Apache Spark
