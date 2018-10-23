@@ -16,6 +16,7 @@ This project contains analytics designed to run on AWS clusters.
 
 * Running out of physical memory
 * Running out of Java heap space memory
+* Estimating cost of a job
 
 ### Check out the folowing Apache Spark webpage links below for useful information
 
