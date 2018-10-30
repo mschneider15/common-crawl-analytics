@@ -18,6 +18,7 @@ import org.apache.spark.sql.SparkSession
 
 import org.apache.hadoop.io._
 
+
 object SimpleApp {
 
   def main(args: Array[String]) {
@@ -36,21 +37,19 @@ object SimpleApp {
 		// Initialize the sparkSession
 		val spark = SparkSession.builder.appName("Simple Application").getOrCreate()
     val sc = spark.sparkContext
-		
+    import spark.implicits._
 
 		// Open the firstDir directory as an RDD of type [(LongWritable, WARCWritable)]
     val warcInput = sc.newAPIHadoopFile(firstDir, classOf[WARCInputFormat], classOf[LongWritable],classOf[WARCWritable]) 
-    
-    // TODO - Collect results so they are automatically stored in a single file
-    
+       
     // Isolate only the WARCWritables in this RDD
     val firstWARCs = warcInput.values
     
     // returns an RDD containing tuples of type (String, Array[String]) which represent an email and the array of pages where it was found sorted from least to greatest number of appearances.
-    var firstRDD = firstWARCs.flatMap(warc => analyze(warc.getRecord)).filter( tup => tup._2 != null && tup._1.endsWith(".mil")).reduceByKey(_ ++ _).sortBy(_._2.size).map(tup => (tup._1, tup._2.mkString(",")))
-    //.map(tup => (tup._1, tup._2.groupBy(x=>x).mapValues(x=>x.length).mkString(",")))
+    var firstRDD = firstWARCs.flatMap(warc => analyze(warc.getRecord)).filter( tup => tup._2 != null).reduceByKey(_ ++ _).sortBy(_._2.size).map(tup => (tup._1, tup._2.mkString(",")))
+ 	var firstDF = firstRDD.toDF
     
-    val source = sc.textFile("s3://eecs-practice/spark-test/wet2.paths")
+    val source = sc.textFile("s3://eecs-practice/spark-test/wet.paths")
     val length = source.count().toInt
     val lineArray = source.take(length).drop(1)
     for(dirPath <-lineArray){
@@ -58,25 +57,23 @@ object SimpleApp {
       val newInput = sc.newAPIHadoopFile(newPath, classOf[WARCInputFormat], classOf[LongWritable],classOf[WARCWritable]) 
       
       val newWarcs = newInput.values
+  
       // Creates a new RDD which contains tuples of an email and all of the pages it was found on. 
       val matches = newWarcs.flatMap( warc => analyze(warc.getRecord) )
     
-      val filtered = matches.filter(tup => tup._2 != null && tup._1.endsWith(".mil"))
+      val filtered = matches.filter(tup => tup._2 != null)
 
       val reduced = filtered.reduceByKey(_ ++ _)
 
       val sorted = reduced.sortBy(_._2.size).map(tup => (tup._1, tup._2.mkString(",")))
+      val dataframesorted = sorted.toDF()
 
-      //val nsorted = sorted.map(tup => (tup._1, tup._2.groupBy(x=>x).mapValues(x=>x.length).mkString(",")))
-     
-      firstRDD = firstRDD.union(sorted)
+      firstDF = firstDF.unionAll(dataframesorted)
     }
-    val savedFilePath = "s3://eecs-practice/spark_test/test_8"
-
-    //val finalResults = firstRDD.sortBy(_._2.size)
+    val savedFilePath = "s3://eecs-practice/spark_test/test_10"
     
-    firstRDD.repartition(1).saveAsTextFile(savedFilePath)
-    //firstRDD.saveAsTextFile(savedFilePath)
+    //firstDF.rdd.repartition(1).saveAsTextFile(savedFilePath)
+    firstRDD.rdd.saveAsTextFile(savedFilePath)
 
     println("--------------")
     println(s"Emails found in WARCRecords saved in $savedFilePath")
@@ -98,30 +95,12 @@ object SimpleApp {
   }
 
   def returnEmails(record: WARCRecord): Array[String] = {
-		// Defines the Regex used in finding emails
+
     val emailPattern = new Regex("""\b[A-Za-z0-9._%+-]{1,64}@(?:[A-Za-z0-9.-]{1,63}\.){1,125}[A-Za-z]{2,63}\b""")
     
     val content = new String(record.getContent)
 
-    return emailPattern.findAllMatchIn(content).toArray.map(email => email.toString)
-  }
-
-  def returnRecordHeader(header: Header): String = {
-    var ret = "--------------\n"
-    ret += "     Record-ID: " + header.getRecordID + "\n"
-    ret += "          Date: " + header.getDateString + "\n"
-    ret += "Content-Length: " + header.getContentLength + "\n"
-    ret += "  Content-Type: " + header.getContentType + "\n"
-    ret += "     TargetUri: " + header.getTargetURI + "\n"
-    return ret
-  }
-
-  def printRecordHeader(record: WARCRecord) {
-    println("--------------")
-    println("     Record-ID: " + record.getHeader.getRecordID)
-    println("          Date: " + record.getHeader.getDateString)
-    println("Content-Length: " + record.getHeader.getContentLength)
-    println("  Content-Type: " + record.getHeader.getContentType)
-    println("     TargetUri: " + record.getHeader.getTargetURI)
+    return emailPattern.findAllMatchIn(content).toArray.map(email => email.toString).filter(email=>email.endsWith(".mil"))
   }
 }
+
