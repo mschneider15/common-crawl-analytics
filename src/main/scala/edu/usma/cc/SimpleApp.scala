@@ -73,7 +73,7 @@ object SimpleApp {
     val savedFilePath = "s3://eecs-practice/spark_test/test_10"
     
     //firstDF.rdd.repartition(1).saveAsTextFile(savedFilePath)
-    firstRDD.rdd.saveAsTextFile(savedFilePath)
+    firstDF.rdd.saveAsTextFile(savedFilePath)
 
     println("--------------")
     println(s"Emails found in WARCRecords saved in $savedFilePath")
