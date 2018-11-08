@@ -46,8 +46,14 @@ object SimpleApp {
     val firstWARCs = warcInput.values
     
     // returns an RDD containing tuples of type (String, Array[String]) which represent an email and the array of pages where it was found sorted from least to greatest number of appearances.
-    var firstRDD = firstWARCs.flatMap(warc => analyze(warc.getRecord)).filter( tup => tup._2 != null).reduceByKey(_ ++ _).sortBy(_._2.size).map(tup => (tup._1, tup._2.mkString(",")))
- 	var firstDF = firstRDD.toDF
+
+    var firstRDD = firstWARCs.flatMap(warc => analyze(warc.getRecord)).filter( tup => tup._2 != null)
+    case class Record(email: String, pages: Array[String])
+    var firstDF = firstRDD.toDF.as[Record]
+    var reducedDF = firstDF.groupBy("email").agg(collect_set("pages"))
+
+ //   .reduceByKey(_ ++ _).sortBy(_._2.size).map(tup => (tup._1, tup._2.mkString(",")))
+    
     
     val source = sc.textFile("s3://eecs-practice/spark-test/wet.paths")
     val length = source.count().toInt
@@ -94,6 +100,28 @@ object SimpleApp {
     }
   }
 
+  def analyze2(record: WARCRecord): Array[Tuple2(String, String)] = {
+
+    // val emailPattern = new Regex("""\b[A-Za-z0-9._%+-]{1,64}@(?:[A-Za-z0-9.-]{1,63}\.){1,125}[A-Za-z]{2,63}\b""")
+    // TODO: make this statically defined or global so we don't have to instantiate a new one every time
+    val milEmailPattern = new Regex("""\b[A-Za-z0-9._%+-]{1,64}@(?:[A-Za-z0-9.-]{1,63}\.){1,125}mil\b""")
+
+    // TODO: avoid doing a String copy here ... what does getContent return?
+    val content = new String(record.getContent)
+
+    val emails = milEmailPattern.findAllMatchIn(content).toArray.map(email => email.toString) //.filter(email=>email.endsWith(".mil"))
+
+    if (emails.isEmpty) {
+      return Array(("null", null))
+    } else {
+      val uri = new URI(record.getHeader.getTargetURI)
+      val url = uri.toURL.getHost()
+      for (email <- emails) yield {
+       (email, url.toString)
+      }
+    }
+  }
+  
   def returnEmails(record: WARCRecord): Array[String] = {
 
     val emailPattern = new Regex("""\b[A-Za-z0-9._%+-]{1,64}@(?:[A-Za-z0-9.-]{1,63}\.){1,125}[A-Za-z]{2,63}\b""")
