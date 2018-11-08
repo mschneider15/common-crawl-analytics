@@ -18,6 +18,7 @@ import org.apache.spark.sql.SparkSession
 
 import org.apache.hadoop.io._
 
+import org.apache.spark.sql.functions.udf
 
 object SimpleApp {
 
@@ -47,10 +48,19 @@ object SimpleApp {
     
     // returns an RDD containing tuples of type (String, Array[String]) which represent an email and the array of pages where it was found sorted from least to greatest number of appearances.
 
-    var firstRDD = firstWARCs.flatMap(warc => analyze(warc.getRecord)).filter( tup => tup._2 != null)
-    case class Record(email: String, pages: Array[String])
+    // Changing things up a little bit to turn our RDD into a DataFrame a little sooner.
+    // The DataFrame will have a row for each email, url combo.
+    // The groupBy and aggregate (agg function) will create a unique list of URLs, then convert to a String using concat_ws
+
+    var firstRDD = firstWARCs.flatMap(warc => analyze2(warc.getRecord)).filter( tup => tup._2 != null)
+    case class Record(email: String, url: String)
     var firstDF = firstRDD.toDF.as[Record]
-    var reducedDF = firstDF.groupBy("email").agg(collect_set("pages"))
+    var reducedDF = firstDF.groupBy("email").agg(concat_ws(",", collect_set("url")) as "pageString")
+    // We may want to just do a collect_set and do something with its size for easier analysis after saving
+    //     var reducedDF = firstDF.groupBy("email").agg(collect_set("url") as "pages")
+    //     var reducedDF2.withColumn("num_pages",size(col("pages")))
+    reducedDF.show
+    println(reducedDF.count)
 
  //   .reduceByKey(_ ++ _).sortBy(_._2.size).map(tup => (tup._1, tup._2.mkString(",")))
     
@@ -121,7 +131,9 @@ object SimpleApp {
       }
     }
   }
-  
+  // TODO: see if we can create a new column in our DataFrame earlier. **For now, it is way easier to use an RDD then convert so we don't have to deal with a DF with Arrays
+  // val analyze2Udf = udf(analyze2(_:WARCRecord))
+
   def returnEmails(record: WARCRecord): Array[String] = {
 
     val emailPattern = new Regex("""\b[A-Za-z0-9._%+-]{1,64}@(?:[A-Za-z0-9.-]{1,63}\.){1,125}[A-Za-z]{2,63}\b""")
