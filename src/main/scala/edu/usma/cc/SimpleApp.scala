@@ -18,7 +18,7 @@ import org.apache.spark.sql.SparkSession
 
 import org.apache.hadoop.io._
 
-import org.apache.spark.sql.functions.udf
+import org.apache.spark.sql.functions._
 
 object SimpleApp {
 
@@ -53,8 +53,8 @@ object SimpleApp {
     // The groupBy and aggregate (agg function) will create a unique list of URLs, then convert to a String using concat_ws
 
     var firstRDD = firstWARCs.flatMap(warc => analyze2(warc.getRecord)).filter( tup => tup._2 != null)
-    case class Record(email: String, url: String)
-    var firstDF = firstRDD.toDF.as[Record]
+    // case class Record(email: String, url: String)
+    var firstDF = firstRDD.toDF("email","url")
     var reducedDF = firstDF.groupBy("email").agg(concat_ws(",", collect_set("url")) as "pageString")
     // We may want to just do a collect_set and do something with its size for easier analysis after saving
     //     var reducedDF = firstDF.groupBy("email").agg(collect_set("url") as "pages")
@@ -110,7 +110,7 @@ object SimpleApp {
     }
   }
 
-  def analyze2(record: WARCRecord): Array[Tuple2(String, String)] = {
+  def analyze2(record: WARCRecord): Array[Tuple2[String, String]] = {
 
     // val emailPattern = new Regex("""\b[A-Za-z0-9._%+-]{1,64}@(?:[A-Za-z0-9.-]{1,63}\.){1,125}[A-Za-z]{2,63}\b""")
     // TODO: make this statically defined or global so we don't have to instantiate a new one every time
