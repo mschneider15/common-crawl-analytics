@@ -79,14 +79,17 @@ object SimpleApp {
       //val matches = newWarcs.flatMap( warc => analyze(warc.getRecord) )
       //val filtered = matches.filter(tup => tup._2 != null)
       //val reduced = filtered.reduceByKey(_ ++ _)
-      // val sorted = reduced.sortBy(_._2.size).map(tup => (tup._1, tup._2.mkString(",")))
-
-      // why do we need to sort here? 
-      // val dataframesorted = sorted.toDF()
-
+     
       val newDF = newWarcs.flatMap( warc => analyze2(warc.getRecord)).filter( tup => tup._2 != null).toDF("email","url")
       val newReducedDF = newDF.groupBy("email").agg(concat_ws(",", collect_set("url")) as "pageString")
-      
+
+      // why do we need to sort here?
+      // original:
+      // val sorted = reduced.sortBy(_._2.size).map(tup => (tup._1, tup._2.mkString(",")))
+      // val dataframesorted = sorted.toDF()
+      // if we want sorting again (not tested):
+      // newReducedDF = newDF.groupBy("email").agg(collect_set("url")) as "urlString").orderBy(size(col("urlString"))).withColumn("pageString",concat_ws(",", col("urlString")))
+
       // Don't we want to union our reduced DF not the firstDF? 
       // firstDF = firstDF.unionAll(dataframesorted)
       reducedDF = reducedDF.union(newReducedDF)
