@@ -23,29 +23,29 @@ import org.apache.spark.sql.functions._
 object SimpleApp {
 
   def main(args: Array[String]) {
-		// Path to WARC files
-		// Directory paths will allow access to all files within	
+    // Path to WARC files
+    // Directory paths will allow access to all files within
     val firstDir = "s3://commoncrawl/crawl-data/CC-MAIN-2016-18/segments/1461860106452.21/wet/CC-MAIN-20160428161506-00000-ip-10-239-7-51.ec2.internal.warc.wet.gz"
-		val warcPathFirstHalf = "s3://commoncrawl/"
+    val warcPathFirstHalf = "s3://commoncrawl/"
 
     // An array of the final path segments for each directory containing warc files
     /*val warcDirs = Array(
-      "crawl-data/CC-MAIN-2016-18/segments/1461860106452.21/wet/CC-MAIN-20160428161506-00001-ip-10-239-7-51.ec2.internal.warc.wet.gz", 
-      "crawl-data/CC-MAIN-2016-18/segments/1461860106452.21/wet/CC-MAIN-20160428161506-00002-ip-10-239-7-51.ec2.internal.warc.wet.gz")
-*/
+     "crawl-data/CC-MAIN-2016-18/segments/1461860106452.21/wet/CC-MAIN-20160428161506-00001-ip-10-239-7-51.ec2.internal.warc.wet.gz", 
+     "crawl-data/CC-MAIN-2016-18/segments/1461860106452.21/wet/CC-MAIN-20160428161506-00002-ip-10-239-7-51.ec2.internal.warc.wet.gz")
+     */
     println("Starting cluster")
 
-		// Initialize the sparkSession
-		val spark = SparkSession.builder.appName("Simple Application").getOrCreate()
+    // Initialize the sparkSession
+    val spark = SparkSession.builder.appName("Simple Application").getOrCreate()
     val sc = spark.sparkContext
     import spark.implicits._
 
-		// Open the firstDir directory as an RDD of type [(LongWritable, WARCWritable)]
+    // Open the firstDir directory as an RDD of type [(LongWritable, WARCWritable)]
     val warcInput = sc.newAPIHadoopFile(firstDir, classOf[WARCInputFormat], classOf[LongWritable],classOf[WARCWritable]) 
        
     // Isolate only the WARCWritables in this RDD
     val firstWARCs = warcInput.values
-    
+
     // returns an RDD containing tuples of type (String, Array[String]) which represent an email and the array of pages where it was found sorted from least to greatest number of appearances.
 
     // Changing things up a little bit to turn our RDD into a DataFrame a little sooner.
@@ -62,34 +62,43 @@ object SimpleApp {
     reducedDF.show
     println(reducedDF.count)
 
- //   .reduceByKey(_ ++ _).sortBy(_._2.size).map(tup => (tup._1, tup._2.mkString(",")))
-    
+    //   .reduceByKey(_ ++ _).sortBy(_._2.size).map(tup => (tup._1, tup._2.mkString(",")))
     
     val source = sc.textFile("s3://eecs-practice/spark-test/wet.paths")
     val length = source.count().toInt
     val lineArray = source.take(length).drop(1)
     for(dirPath <-lineArray){
+      println("Directory: " + dirPath)
       val newPath = warcPathFirstHalf + dirPath
       val newInput = sc.newAPIHadoopFile(newPath, classOf[WARCInputFormat], classOf[LongWritable],classOf[WARCWritable]) 
       
       val newWarcs = newInput.values
   
       // Creates a new RDD which contains tuples of an email and all of the pages it was found on. 
-      val matches = newWarcs.flatMap( warc => analyze(warc.getRecord) )
-    
-      val filtered = matches.filter(tup => tup._2 != null)
 
-      val reduced = filtered.reduceByKey(_ ++ _)
+      //val matches = newWarcs.flatMap( warc => analyze(warc.getRecord) )
+      //val filtered = matches.filter(tup => tup._2 != null)
+      //val reduced = filtered.reduceByKey(_ ++ _)
+      // val sorted = reduced.sortBy(_._2.size).map(tup => (tup._1, tup._2.mkString(",")))
 
-      val sorted = reduced.sortBy(_._2.size).map(tup => (tup._1, tup._2.mkString(",")))
-      val dataframesorted = sorted.toDF()
+      // why do we need to sort here? 
+      // val dataframesorted = sorted.toDF()
 
-      firstDF = firstDF.unionAll(dataframesorted)
+      val newDF = newWarcs.flatMap( warc => analyze2(warc.getRecord)).filter( tup => tup._2 != null).toDF("email","url")
+      val newReducedDF = newDF.groupBy("email").agg(concat_ws(",", collect_set("url")) as "pageString")
+      
+      // Don't we want to union our reduced DF not the firstDF? 
+      // firstDF = firstDF.unionAll(dataframesorted)
+      reducedDF = reducedDF.union(newReducedDF)
+      reducedDF.show
+      println(reducedDF.count)
     }
     val savedFilePath = "s3://eecs-practice/spark_test/test_10"
     
     //firstDF.rdd.repartition(1).saveAsTextFile(savedFilePath)
-    firstDF.rdd.saveAsTextFile(savedFilePath)
+    // firstDF.rdd.saveAsTextFile(savedFilePath)
+
+    reducedDF.rdd.saveAsTextFile(savedFilePath)
 
     println("--------------")
     println(s"Emails found in WARCRecords saved in $savedFilePath")
