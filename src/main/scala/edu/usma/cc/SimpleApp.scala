@@ -25,9 +25,13 @@ object SimpleApp {
   def main(args: Array[String]) {
     // Path to WARC files
     // Directory paths will allow access to all files within
-    val firstDir = "s3://commoncrawl/crawl-data/CC-MAIN-2016-18/segments/1461860106452.21/wet/CC-MAIN-20160428161506-00000-ip-10-239-7-51.ec2.internal.warc.wet.gz"
-    val warcPathFirstHalf = "s3://commoncrawl/"
+    // val firstDir = "s3://commoncrawl/crawl-data/CC-MAIN-2016-18/segments/1461860106452.21/wet/CC-MAIN-20160428161506-00000-ip-10-239-7-51.ec2.internal.warc.wet.gz"
+    // val warcPathFirstHalf = "s3://commoncrawl/"
+    val firstDir = "file:///Users/ethan/common-crawl-analytics/warc_files/msg_0000.warc"
+    val warcPathFirstHalf = "file:///Users/ethan/common-crawl-analytics/warc_files/"
 
+    
+    
     // An array of the final path segments for each directory containing warc files
     /*val warcDirs = Array(
      "crawl-data/CC-MAIN-2016-18/segments/1461860106452.21/wet/CC-MAIN-20160428161506-00001-ip-10-239-7-51.ec2.internal.warc.wet.gz", 
@@ -52,7 +56,7 @@ object SimpleApp {
     // The DataFrame will have a row for each email, url combo.
     // The groupBy and aggregate (agg function) will create a unique list of URLs, then convert to a String using concat_ws
 
-    var firstRDD = firstWARCs.flatMap(warc => analyze2(warc.getRecord)).filter( tup => tup._2 != null)
+    var firstRDD = firstWARCs.flatMap(warc => analyze4(warc.getRecord)).filter( tup => tup._2 != null)
     // case class Record(email: String, url: String)
     var firstDF = firstRDD.toDF("email","url")
     var reducedDF = firstDF.groupBy("email").agg(concat_ws(",", collect_set("url")) as "pageString")
@@ -64,9 +68,11 @@ object SimpleApp {
 
     //   .reduceByKey(_ ++ _).sortBy(_._2.size).map(tup => (tup._1, tup._2.mkString(",")))
     
-    val source = sc.textFile("s3://eecs-practice/spark-test/wet.paths")
+    val source = sc.textFile("file:///Users/ethan/common-crawl-analytics/warc_file_list.txt")
     val length = source.count().toInt
     val lineArray = source.take(length).drop(1)
+
+
     for(dirPath <-lineArray){
       println("Directory: " + dirPath)
       val newPath = warcPathFirstHalf + dirPath
@@ -80,7 +86,7 @@ object SimpleApp {
       //val filtered = matches.filter(tup => tup._2 != null)
       //val reduced = filtered.reduceByKey(_ ++ _)
      
-      val newDF = newWarcs.flatMap( warc => analyze2(warc.getRecord)).filter( tup => tup._2 != null).toDF("email","url")
+      val newDF = newWarcs.flatMap( warc => analyze4(warc.getRecord)).toDF("email","url")
       val newReducedDF = newDF.groupBy("email").agg(concat_ws(",", collect_set("url")) as "pageString")
 
       // why do we need to sort here?
@@ -93,10 +99,10 @@ object SimpleApp {
       // Don't we want to union our reduced DF not the firstDF? 
       // firstDF = firstDF.unionAll(dataframesorted)
       reducedDF = reducedDF.union(newReducedDF)
-      reducedDF.show
+      reducedDF.cache
       println(reducedDF.count)
     }
-    val savedFilePath = "s3://eecs-practice/spark_test/test_10"
+    val savedFilePath = "file:///Users/ethan/common-crawl-analytics/test.out"
     
     //firstDF.rdd.repartition(1).saveAsTextFile(savedFilePath)
     // firstDF.rdd.saveAsTextFile(savedFilePath)
@@ -122,11 +128,43 @@ object SimpleApp {
     }
   }
 
+  val analyze3: (WARCRecord => Array[Tuple2[String, String]]) = (record: WARCRecord) => {
+    var emails = Array[String]()
+    val content = record.toString.split(" ")
+    for (word <- content){
+      if (word.length <= 126 && word.contains("@") && word.endsWith(".ic.gov")) word +: emails
+    }
+    if (emails.isEmpty) {
+      Array(("null", null))
+    } else {
+      val uri = new URI(record.getHeader.getTargetURI)
+      val url = uri.toURL.getHost()
+      for (email <- emails) yield {
+        (email, url.toString)
+      }
+    }
+  }
+
+  val analyze4: (WARCRecord => Array[Tuple2[String, String]]) = (record: WARCRecord) => {
+    val emails = record.toString.split(" ").filter(word => word.length <= 126 && word.contains("@") && word.endsWith(".ic.gov"))
+    
+    if (emails.isEmpty) {
+      Array(("null", null))
+    } else {
+      val uri = new URI(record.getHeader.getTargetURI)
+      val url = uri.toURL.getHost()
+      for (email <- emails) yield {
+        (email, url.toString)
+      }
+    }
+  }
+
   def analyze2(record: WARCRecord): Array[Tuple2[String, String]] = {
 
     // val emailPattern = new Regex("""\b[A-Za-z0-9._%+-]{1,64}@(?:[A-Za-z0-9.-]{1,63}\.){1,125}[A-Za-z]{2,63}\b""")
+    // val milEmailPattern = new Regex("""\b[A-Za-z0-9._%+-]{1,64}@(?:[A-Za-z0-9.-]{1,63}\.){1,125}[A-Za-z]{2,63}\b""")
     // TODO: make this statically defined or global so we don't have to instantiate a new one every time
-    val milEmailPattern = new Regex("""\b[A-Za-z0-9._%+-]{1,64}@(?:[A-Za-z0-9.-]{1,63}\.){1,125}mil\b""")
+    val milEmailPattern = new Regex("""\b[A-Za-z0-9._%+-]{1,64}@(?:[A-Za-z0-9.-]{1,63}\.)mil\b""")
 
     // TODO: avoid doing a String copy here ... what does getContent return?
     val content = new String(record.getContent)
@@ -139,7 +177,7 @@ object SimpleApp {
       val uri = new URI(record.getHeader.getTargetURI)
       val url = uri.toURL.getHost()
       for (email <- emails) yield {
-       (email, url.toString)
+        (email, url.toString)
       }
     }
   }
