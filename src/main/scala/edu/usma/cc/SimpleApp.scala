@@ -56,13 +56,15 @@ object SimpleApp {
     val length = source.count().toInt
     val lineArray = source.take(length).drop(1)
 
+    // First specify an RDD that has all of our WARC objects, we will do the analyze/groupBy operations later
     for(dirPath <-lineArray){
       println("Directory: " + dirPath)
       val newPath = warcPathFirstHalf + dirPath
 
       firstWARCs.union(sc.newAPIHadoopFile(newPath, classOf[WARCInputFormat], classOf[LongWritable],classOf[WARCWritable]).values)
     }
-  
+
+    // now that we have all of our input files, do the actual analytic
     val newDF = firstWARCs.flatMap( warc => analyze4(warc.getRecord)).toDF("email","url")
     val reducedDF = newDF.groupBy("email").agg(concat_ws(",", collect_set("url")) as "pageString")
 
