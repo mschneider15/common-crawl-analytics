@@ -48,7 +48,7 @@ object SimpleApp {
     val warcInput = sc.newAPIHadoopFile(firstDir, classOf[WARCInputFormat], classOf[LongWritable],classOf[WARCWritable]) 
        
     // Isolate only the WARCWritables in this RDD
-    val firstWARCs = warcInput.values
+    var firstWARCs = warcInput.values
 
     // returns an RDD containing tuples of type (String, Array[String]) which represent an email and the array of pages where it was found sorted from least to greatest number of appearances.
 
@@ -56,15 +56,16 @@ object SimpleApp {
     // The DataFrame will have a row for each email, url combo.
     // The groupBy and aggregate (agg function) will create a unique list of URLs, then convert to a String using concat_ws
 
-    var firstRDD = firstWARCs.flatMap(warc => analyze4(warc.getRecord)).filter( tup => tup._2 != null)
+    // var firstRDD = firstWARCs.flatMap(warc => analyze4(warc.getRecord))
     // case class Record(email: String, url: String)
-    var firstDF = firstRDD.toDF("email","url")
-    var reducedDF = firstDF.groupBy("email").agg(concat_ws(",", collect_set("url")) as "pageString")
+
+    // var firstDF = firstRDD.toDF("email","url")
+    // var reducedDF = firstDF.groupBy("email").agg(concat_ws(",", collect_set("url")) as "pageString")
     // We may want to just do a collect_set and do something with its size for easier analysis after saving
     //     var reducedDF = firstDF.groupBy("email").agg(collect_set("url") as "pages")
     //     var reducedDF2.withColumn("num_pages",size(col("pages")))
-    reducedDF.show
-    println(reducedDF.count)
+    //reducedDF.show
+    // println(reducedDF.count)
 
     //   .reduceByKey(_ ++ _).sortBy(_._2.size).map(tup => (tup._1, tup._2.mkString(",")))
     
@@ -72,36 +73,32 @@ object SimpleApp {
     val length = source.count().toInt
     val lineArray = source.take(length).drop(1)
 
+    
 
     for(dirPath <-lineArray){
       println("Directory: " + dirPath)
       val newPath = warcPathFirstHalf + dirPath
-      val newInput = sc.newAPIHadoopFile(newPath, classOf[WARCInputFormat], classOf[LongWritable],classOf[WARCWritable]) 
-      
-      val newWarcs = newInput.values
-  
-      // Creates a new RDD which contains tuples of an email and all of the pages it was found on. 
 
-      //val matches = newWarcs.flatMap( warc => analyze(warc.getRecord) )
-      //val filtered = matches.filter(tup => tup._2 != null)
-      //val reduced = filtered.reduceByKey(_ ++ _)
-     
-      val newDF = newWarcs.flatMap( warc => analyze4(warc.getRecord)).toDF("email","url")
-      val newReducedDF = newDF.groupBy("email").agg(concat_ws(",", collect_set("url")) as "pageString")
+      firstWARCs.union(sc.newAPIHadoopFile(newPath, classOf[WARCInputFormat], classOf[LongWritable],classOf[WARCWritable]).values)
 
-      // why do we need to sort here?
-      // original:
-      // val sorted = reduced.sortBy(_._2.size).map(tup => (tup._1, tup._2.mkString(",")))
-      // val dataframesorted = sorted.toDF()
-      // if we want sorting again (not tested):
-      // newReducedDF = newDF.groupBy("email").agg(collect_set("url")) as "urlString").orderBy(size(col("urlString"))).withColumn("pageString",concat_ws(",", col("urlString")))
-
-      // Don't we want to union our reduced DF not the firstDF? 
-      // firstDF = firstDF.unionAll(dataframesorted)
-      reducedDF = reducedDF.union(newReducedDF)
-      reducedDF.cache
-      println(reducedDF.count)
     }
+  
+    //val matches = newWarcs.flatMap( warc => analyze(warc.getRecord) )
+    //val filtered = matches.filter(tup => tup._2 != null)
+    //val reduced = filtered.reduceByKey(_ ++ _)
+
+    val newDF = firstWARCs.flatMap( warc => analyze4(warc.getRecord)).toDF("email","url")
+    val reducedDF = newDF.groupBy("email").agg(concat_ws(",", collect_set("url")) as "pageString")
+
+    // why do we need to sort here?
+    // original:
+    // val sorted = reduced.sortBy(_._2.size).map(tup => (tup._1, tup._2.mkString(",")))
+    // val dataframesorted = sorted.toDF()
+    // if we want sorting again (not tested):
+    // newReducedDF = newDF.groupBy("email").agg(collect_set("url")) as "urlString").orderBy(size(col("urlString"))).withColumn("pageString",concat_ws(",", col("urlString")))
+
+    println(reducedDF.count)
+
     val savedFilePath = "file:///Users/ethan/common-crawl-analytics/test.out"
     
     //firstDF.rdd.repartition(1).saveAsTextFile(savedFilePath)
