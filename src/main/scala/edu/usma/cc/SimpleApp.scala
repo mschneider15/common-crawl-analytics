@@ -52,41 +52,17 @@ object SimpleApp {
 
     // returns an RDD containing tuples of type (String, Array[String]) which represent an email and the array of pages where it was found sorted from least to greatest number of appearances.
 
-    // Changing things up a little bit to turn our RDD into a DataFrame a little sooner.
-    // The DataFrame will have a row for each email, url combo.
-    // The groupBy and aggregate (agg function) will create a unique list of URLs, then convert to a String using concat_ws
-
-    // var firstRDD = firstWARCs.flatMap(warc => analyze4(warc.getRecord))
-    // case class Record(email: String, url: String)
-
-    // var firstDF = firstRDD.toDF("email","url")
-    // var reducedDF = firstDF.groupBy("email").agg(concat_ws(",", collect_set("url")) as "pageString")
-    // We may want to just do a collect_set and do something with its size for easier analysis after saving
-    //     var reducedDF = firstDF.groupBy("email").agg(collect_set("url") as "pages")
-    //     var reducedDF2.withColumn("num_pages",size(col("pages")))
-    //reducedDF.show
-    // println(reducedDF.count)
-
-    //   .reduceByKey(_ ++ _).sortBy(_._2.size).map(tup => (tup._1, tup._2.mkString(",")))
-    
     val source = sc.textFile("file:///Users/ethan/common-crawl-analytics/warc_file_list.txt")
     val length = source.count().toInt
     val lineArray = source.take(length).drop(1)
-
-    
 
     for(dirPath <-lineArray){
       println("Directory: " + dirPath)
       val newPath = warcPathFirstHalf + dirPath
 
       firstWARCs.union(sc.newAPIHadoopFile(newPath, classOf[WARCInputFormat], classOf[LongWritable],classOf[WARCWritable]).values)
-
     }
   
-    //val matches = newWarcs.flatMap( warc => analyze(warc.getRecord) )
-    //val filtered = matches.filter(tup => tup._2 != null)
-    //val reduced = filtered.reduceByKey(_ ++ _)
-
     val newDF = firstWARCs.flatMap( warc => analyze4(warc.getRecord)).toDF("email","url")
     val reducedDF = newDF.groupBy("email").agg(concat_ws(",", collect_set("url")) as "pageString")
 
