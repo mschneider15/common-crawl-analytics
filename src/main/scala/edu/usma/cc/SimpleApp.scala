@@ -51,11 +51,7 @@ object SimpleApp {
     val newRDD = firstWARCs.flatMap( warc => 
       try{
       analyze(warc.getRecord)
-    }
-    catch{
-      case e: IllegalStateException => Array(("emails not considered", "header too large to open"))
-    }
-    ).filter(x => x._1 != "null")
+    }.toOption)
     
     //convert to DF, it's easier to do analytics on this datastructure 
     val newDF = newRDD.toDF("email","url")
@@ -84,21 +80,11 @@ object SimpleApp {
     if (emails.isEmpty) {
       return Array(("null", null))
     } else {
-      var url = "can't detect"
-      try{
       val uri = new URI(record.getHeader.getTargetURI)
       url = uri.toURL.getHost().toString
-    }
-    catch{
-      case e: IllegalStateException => url = "Too long to detect"
-    }
-    finally{
       for (email <- emails)  {
         final_array = final_array :+ ((email, url))
       }
       }
-    }
-    return final_array
-  }
 }
 
