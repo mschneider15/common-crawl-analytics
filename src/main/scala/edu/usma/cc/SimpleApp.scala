@@ -49,7 +49,7 @@ object SimpleApp {
 
     // pull out the ic.gov email 
     val newRDD = firstWARCs.flatMap( warc => 
-      try{
+      Try{
       analyze(warc.getRecord)
     }.toOption)
     
